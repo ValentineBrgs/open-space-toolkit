@@ -57,6 +57,10 @@ Once the container is running, access [http://localhost:8888/lab](http://localho
 ## Using OSTk in your applications
 
 To help jump-start using OSTk, here is a simple Docker image that you can use to create your applications.
+We have leveraged C++20 compatibility and compiled the packages with G++ 13. 
+
+Since most LTS linux flavors don't yet come default with G++13, the installation of the package is done manually.
+**These instalations can be removed when Ubuntu version >= 24.0 or debian >= 13.0**
 
 ### Docker
 
@@ -65,6 +69,7 @@ ARG PYTHON_BASE_VERSION="3.11"
 
 # Open Space Toolkit install image
 
+# This is a Debian based image
 FROM mcr.microsoft.com/vscode/devcontainers/python:${PYTHON_BASE_VERSION}
 
 ARG OSTK_DATA_LOCAL_CACHE="/var/cache/open-space-toolkit-data"
@@ -74,6 +79,23 @@ ARG OSTK_DATA_LOCAL_CACHE="/var/cache/open-space-toolkit-data"
 RUN apt-get update && \
     apt-get install -y git-lfs && \
     rm -rf /var/lib/apt/lists/*
+
+
+## Install GCC/G++ 13
+RUN echo "deb http://deb.debian.org/debian testing main" > /etc/apt/sources.list.d/testing.list
+
+# Set testing repository to lower priority
+RUN printf 'Package: *\nPin: release a=testing\nPin-Priority: 100\n' > /etc/apt/preferences.d/testing
+
+# Update package lists and install required packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the latest GCC from testing
+RUN apt-get update && apt-get install -y -t testing gcc g++ && rm -rf /var/lib/apt/lists/*
+
 
 ## Seed OSTk Data
 
@@ -112,6 +134,40 @@ ENTRYPOINT ["/bin/zsh"]
 
 WORKDIR /app
 ```
+
+### NOTE : For Ubuntu, the installation of GCC/G++13, replace 
+
+```docker
+
+## Install GCC/G++ 13
+RUN echo "deb http://deb.debian.org/debian testing main" > /etc/apt/sources.list.d/testing.list
+
+# Set testing repository to lower priority
+RUN printf 'Package: *\nPin: release a=testing\nPin-Priority: 100\n' > /etc/apt/preferences.d/testing
+
+# Update package lists and install required packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the latest GCC from testing
+RUN apt-get update && apt-get install -y -t testing gcc g++ && rm -rf /var/lib/apt/lists/*
+```
+by 
+```docker
+## Install GCC/G++ 13
+
+# Update package lists and install required packages
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test \
+    && apt-get update \
+    && apt-get install gcc-13 g++-13 -y
+```
+
 
 ### pyproject.toml
 
